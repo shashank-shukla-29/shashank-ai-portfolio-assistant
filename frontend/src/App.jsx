@@ -6,7 +6,11 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import "./App.css";
 
-const API_URL = "http://localhost:8000";
+// Use the deployed backend URL from Vercel.
+// Fall back to localhost when running the project locally.
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
 
 const suggestedQuestions = [
   "Tell me about Shashank's technical skills.",
