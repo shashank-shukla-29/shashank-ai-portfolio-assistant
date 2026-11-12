@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Literal
 
-import fitz
+import pymupdf
 from docx import Document
 from dotenv import load_dotenv
 
@@ -31,20 +31,25 @@ from pydantic import BaseModel
 # 1. CONFIGURATION
 # --------------------------------------------------
 
-BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "data"
+BASE_DIR = Path(__file__).resolve().parent
 
-DATA_DIR.mkdir(exist_ok=True)
+# Local development uses backend/data.
+# Production can use a persistent disk through DATA_DIR.
+DATA_DIR = Path(
+    os.getenv("DATA_DIR", str(BASE_DIR / "data"))
+).expanduser()
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 load_dotenv(BASE_DIR / ".env")
 
-api_key = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 ADMIN_UPLOAD_KEY = os.getenv("ADMIN_UPLOAD_KEY")
 
-if not api_key:
-    raise ValueError("GROQ_API_KEY is missing from backend/.env")
+if not GROQ_API_KEY:
+    raise ValueError("GROQ_API_KEY is missing.")
 
-client = Groq(api_key=api_key)
+client = Groq(api_key=GROQ_API_KEY)
 
 MODEL = "openai/gpt-oss-20b"
 
@@ -54,18 +59,31 @@ PROFILE_PATH = BASE_DIR / "profile.json"
 RESUME_TEXT_PATH = DATA_DIR / "current_resume.txt"
 METADATA_PATH = DATA_DIR / "resume_metadata.json"
 
+# Set CORS_ORIGINS in production to your deployed frontend URL.
+# Multiple origins can be separated by commas.
+CORS_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173"
+    ).split(",")
+    if origin.strip()
+]
+
 
 # --------------------------------------------------
 # 2. FASTAPI INITIALIZATION
 # --------------------------------------------------
 
 app = FastAPI(
-    title="Shashank AI Portfolio Assistant"
+    title="Shashank AI Portfolio Assistant",
+    description="AI-powered portfolio assistant API",
+    version="1.0.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-Admin-Key"],
 )
@@ -80,7 +98,7 @@ def verify_admin_key(x_admin_key: str | None):
     if not ADMIN_UPLOAD_KEY:
         raise HTTPException(
             status_code=503,
-            detail="Admin key is not configured."
+            detail="Admin authentication is not configured."
         )
 
     if not x_admin_key or not secrets.compare_digest(
@@ -97,6 +115,7 @@ def verify_admin_key(x_admin_key: str | None):
 def verify_admin(
     x_admin_key: str | None = Header(default=None)
 ):
+
     verify_admin_key(x_admin_key)
 
     return {
@@ -231,13 +250,20 @@ def resume_info(
 
     if METADATA_PATH.exists():
 
-        with open(
-            METADATA_PATH,
-            "r",
-            encoding="utf-8"
-        ) as file:
+        try:
+            with open(
+                METADATA_PATH,
+                "r",
+                encoding="utf-8"
+            ) as file:
 
-            metadata = json.load(file)
+                metadata = json.load(file)
+
+        except (OSError, json.JSONDecodeError):
+            raise HTTPException(
+                status_code=500,
+                detail="Could not read resume metadata."
+            )
 
     return {
         "knowledge_source": (
@@ -260,7 +286,7 @@ def resume_info(
 
 def extract_pdf_text(file_bytes: bytes):
 
-    document = fitz.open(
+    document = pymupdf.open(
         stream=file_bytes,
         filetype="pdf"
     )
@@ -326,29 +352,28 @@ async def upload_resume(
     extension = Path(filename).suffix.lower()
 
     if extension not in [".pdf", ".docx"]:
-
         raise HTTPException(
             status_code=400,
             detail="Only PDF and DOCX files are supported."
         )
 
-    file_bytes = await file.read(MAX_FILE_SIZE + 1)
+    try:
+        file_bytes = await file.read(MAX_FILE_SIZE + 1)
+
+    finally:
+        await file.close()
 
     if not file_bytes:
-
         raise HTTPException(
             status_code=400,
             detail="The uploaded file is empty."
         )
 
     if len(file_bytes) > MAX_FILE_SIZE:
-
         raise HTTPException(
             status_code=413,
             detail="File size must not exceed 5 MB."
         )
-
-    await file.close()
 
     try:
 
@@ -378,7 +403,6 @@ async def upload_resume(
         raise
 
     except Exception:
-
         raise HTTPException(
             status_code=400,
             detail="Could not read the uploaded document."
@@ -387,7 +411,6 @@ async def upload_resume(
     extracted_text = extracted_text.strip()
 
     if not extracted_text:
-
         raise HTTPException(
             status_code=400,
             detail=(
@@ -396,32 +419,13 @@ async def upload_resume(
             )
         )
 
-    # Save the new resume.
+    # Prepare new resume and metadata.
     resume_file_path = DATA_DIR / f"current_resume{extension}"
     temporary_file = DATA_DIR / f"current_resume{extension}.tmp"
 
-    temporary_file.write_bytes(file_bytes)
-    temporary_file.replace(resume_file_path)
-
-    # Save extracted text.
     temporary_text_path = DATA_DIR / "current_resume.txt.tmp"
+    temporary_metadata_path = DATA_DIR / "resume_metadata.json.tmp"
 
-    temporary_text_path.write_text(
-        extracted_text,
-        encoding="utf-8"
-    )
-
-    temporary_text_path.replace(RESUME_TEXT_PATH)
-
-    # Remove the previous resume format.
-    for old_extension in [".pdf", ".docx"]:
-
-        old_file = DATA_DIR / f"current_resume{old_extension}"
-
-        if old_file != resume_file_path and old_file.exists():
-            old_file.unlink()
-
-    # Save upload information.
     metadata = {
         "filename": filename,
         "uploaded_at": datetime.now(
@@ -430,14 +434,47 @@ async def upload_resume(
         "characters_extracted": len(extracted_text)
     }
 
-    temporary_metadata_path = DATA_DIR / "resume_metadata.json.tmp"
+    try:
 
-    temporary_metadata_path.write_text(
-        json.dumps(metadata, indent=2),
-        encoding="utf-8"
-    )
+        # Write temporary files first.
+        temporary_file.write_bytes(file_bytes)
 
-    temporary_metadata_path.replace(METADATA_PATH)
+        temporary_text_path.write_text(
+            extracted_text,
+            encoding="utf-8"
+        )
+
+        temporary_metadata_path.write_text(
+            json.dumps(metadata, indent=2),
+            encoding="utf-8"
+        )
+
+        # Replace the active files.
+        temporary_file.replace(resume_file_path)
+        temporary_text_path.replace(RESUME_TEXT_PATH)
+        temporary_metadata_path.replace(METADATA_PATH)
+
+        # Remove the previous resume format.
+        for old_extension in [".pdf", ".docx"]:
+
+            old_file = DATA_DIR / f"current_resume{old_extension}"
+
+            if old_file != resume_file_path and old_file.exists():
+                old_file.unlink()
+
+    except OSError:
+        for temporary_path in [
+            temporary_file,
+            temporary_text_path,
+            temporary_metadata_path
+        ]:
+            if temporary_path.exists():
+                temporary_path.unlink()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Could not save the uploaded resume."
+        )
 
     # Update chatbot knowledge immediately.
     candidate_data = extracted_text
@@ -457,6 +494,12 @@ async def upload_resume(
 @app.post("/chat")
 def chat(req: ChatRequest):
 
+    if not req.messages:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one message is required."
+        )
+
     messages = [
         {
             "role": "system",
@@ -471,21 +514,33 @@ def chat(req: ChatRequest):
 
     def stream_reply():
 
-        stream = client.chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            temperature=0.2,
-            stream=True,
-        )
+        try:
 
-        for chunk in stream:
+            stream = client.chat.completions.create(
+                model=MODEL,
+                messages=messages,
+                temperature=0.2,
+                stream=True,
+            )
 
-            content = chunk.choices[0].delta.content
+            for chunk in stream:
 
-            if content:
-                yield content
+                if not chunk.choices:
+                    continue
+
+                content = chunk.choices[0].delta.content
+
+                if content:
+                    yield content
+
+        except Exception:
+            yield "\n\nSorry, an error occurred while generating the response."
 
     return StreamingResponse(
         stream_reply(),
         media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Content-Type-Options": "nosniff"
+        }
     )
