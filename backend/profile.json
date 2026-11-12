@@ -1,0 +1,132 @@
+{
+  "name": "Shashank Shukla",
+  "headline": "Computer Science student (B.Tech) focused on Generative AI, LLM applications, machine learning and computer vision",
+  "location": "Lucknow, India",
+  "education": [
+    {
+      "degree": "Bachelor of Technology in Computer Science",
+      "college": "KIET Group of Institutions, AKTU",
+      "years": "2023 - 2027",
+      "cgpa": "7.5"
+    },
+    {
+      "degree": "Class XII (ICSE)",
+      "college": "Lucknow Public College",
+      "years": "2020 - 2022",
+      "score": "83%"
+    },
+    {
+      "degree": "Class X (ICSE)",
+      "college": "Lucknow Public College",
+      "years": "2020 - 2022",
+      "score": "97.5%"
+    }
+  ],
+  "skills": {
+    "languages": ["Python", "C++", "SQL"],
+    "generative_ai_and_llms": [
+      "LLM APIs (Groq)",
+      "Prompt Engineering",
+      "Structured JSON Output",
+      "Pydantic"
+    ],
+    "ml_and_data_science": [
+      "Machine Learning",
+      "Deep Learning",
+      "CNNs",
+      "NLP",
+      "NumPy",
+      "Pandas",
+      "Matplotlib",
+      "Seaborn",
+      "PyTorch",
+      "Scikit-learn"
+    ],
+    "computer_vision": ["OpenCV", "MediaPipe", "MobileNetV2", "Image Processing"],
+    "web_and_databases": [
+      "Flask",
+      "Streamlit",
+      "HTML",
+      "CSS",
+      "MySQL",
+      "Microsoft SQL Server"
+    ],
+    "libraries_and_tools": [
+      "pypdf",
+      "python-docx",
+      "python-dotenv",
+      "Git",
+      "GitHub",
+      "Docker",
+      "VS Code",
+      "Jupyter",
+      "Google Colab"
+    ],
+    "core_cs": [
+      "Data Structures and Algorithms",
+      "DBMS",
+      "Operating Systems",
+      "OOP",
+      "Computer Networks"
+    ]
+  },
+  "projects": [
+    {
+      "name": "AI Resume Screening & Job Matching System",
+      "duration": "Nov 2026",
+      "tech": ["Python", "Groq API", "Pydantic", "pypdf"],
+      "description": "An automated pipeline that extracts structured requirements from a job description and parses PDF/DOCX resumes in bulk using an LLM (Groq API), returning schema-constrained JSON.",
+      "highlights": [
+        "Designed prompts and Pydantic models to validate parsed fields (skills, experience, education, projects, certifications) and handle missing data reliably.",
+        "Implemented LLM-based matching that scores each candidate from 0-100 with matching and missing skills, then ranks candidates and reports the top and bottom matches.",
+        "Added API rate-limit delays and secure API-key handling via environment variables."
+      ],
+      "hardest_challenge": "Getting the LLM to return reliable, structured JSON for resumes with very different formats and missing sections. This was solved by designing careful prompts and validating every parsed field with Pydantic models, so missing data was handled safely instead of breaking the pipeline. Processing resumes in bulk also hit API rate limits, which was handled by adding delays between requests.",
+      "link": "https://github.com/shashank-shukla-29/ai-resume-screening-system"
+    },
+    {
+      "name": "Real-Time Indian Sign Language Detection",
+      "duration": "Jul 2026 - Sep 2026",
+      "tech": ["Python", "TensorFlow", "OpenCV", "MediaPipe"],
+      "description": "A real-time Indian Sign Language (ISL) recognition system using webcam input, MediaPipe hand tracking, and MobileNetV2 transfer learning for gesture classification.",
+      "highlights": [
+        "Implemented dual-mode recognition for conversational signs and alphabet/number classes using custom and image datasets.",
+        "Integrated hand-crop normalization, confidence-based predictions, and text-to-speech feedback with background threading for responsive inference."
+      ],
+      "hardest_challenge": "Keeping recognition accurate and responsive in real time. Hand-crop normalization and confidence-based predictions made the model's output more stable, and running text-to-speech in a background thread stopped the audio from slowing down webcam inference. Supporting two modes (conversational signs and alphabet/numbers) with different datasets was also a challenge.",
+      "link": "https://github.com/shashank-shukla-29/Sign-Language-Detection-Major"
+    },
+    {
+      "name": "Email Spam Classifier",
+      "duration": "Jun 2026 - Jul 2026",
+      "tech": ["Python", "Scikit-learn", "NLP", "Flask"],
+      "description": "An NLP-based spam classifier using text preprocessing and TF-IDF. Compared Naive Bayes, Logistic Regression, and SVM, achieving 97% accuracy.",
+      "highlights": [
+        "Deployed the trained model with Flask for real-time email classification through an interactive web interface."
+      ],
+      "hardest_challenge": "Choosing the best approach for the task. This involved cleaning and preprocessing raw email text, converting it with TF-IDF, and then comparing Naive Bayes, Logistic Regression and SVM to find the best performer, reaching 97% accuracy. Deploying the model with Flask for real-time predictions was a second challenge.",
+      "link": ""
+    }
+  ],
+  "experience": [
+    {
+      "role": "ServiceNow Virtual Internship Program",
+      "organization": "ServiceNow University, SmartBridge, AICTE Virtual",
+      "duration": "Jul 2026 - Aug 2026",
+      "details": [
+        "Gained hands-on exposure to ServiceNow platform administration and enterprise workflow automation using Flow Designer, Automated Test Framework (ATF), forms, user management, and policy configuration.",
+        "Explored Generative AI, Now Assist, and automation concepts within the ServiceNow ecosystem."
+      ]
+    }
+  ],
+  "achievements": [],
+  "certifications": [
+    "AWS Cloud Practitioner Certification",
+    "Complete Data Science, Machine Learning, Deep Learning & NLP Bootcamp (Udemy)"
+  ],
+  "links": {
+    "github": "https://github.com/shashank-shukla-29",
+    "linkedin": "https://www.linkedin.com/in/shashank-shukla-a7a4362b2/",
+    "email": "shashankshukla187@gmail.com"
+  }
+}
